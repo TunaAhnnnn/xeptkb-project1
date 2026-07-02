@@ -1,0 +1,131 @@
+// Biến lưu trữ trạng thái để hiển thị
+let memoryLog = [];
+let busyLog = [];
+
+// 1. Gửi file lên server
+async function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput.files.length === 0) return alert("Vui lòng chọn file!");
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    const response = await fetch('/api/upload', { method: 'POST', body: formData });
+    const result = await response.json();
+    
+    if (result.success) {
+        document.getElementById('uploadStatus').classList.remove('d-none');
+        alert("Khởi tạo cơ sở dữ liệu thành công!");
+    } else {
+        alert("Lỗi: " + result.error);
+    }
+}
+
+// 2. Thêm môn học
+async function addCourse() {
+    const maHp = document.getElementById('maHpInput').value.trim();
+    if (!maHp) return;
+
+    const response = await fetch('/api/add_course', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ma_hp: maHp })
+    });
+    const result = await response.json();
+
+    if (result.success) {
+        memoryLog.push(`Đã thêm tổ hợp cho: <strong>${maHp.toUpperCase()}</strong>`);
+        updateLogArea();
+        document.getElementById('maHpInput').value = '';
+    } else {
+        alert(result.message || "Không tìm thấy mã HP!");
+    }
+}
+
+// 3. Thêm giờ bận
+async function addBusySlot() {
+    const thu = document.getElementById('thuBan').value.trim();
+    const tg = document.getElementById('tgBan').value.trim();
+    if (!thu || !tg) return;
+
+    const response = await fetch('/api/add_busy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thu: thu, tg: tg })
+    });
+    const result = await response.json();
+
+    if (result.success) {
+        busyLog.push(`Chặn: Thứ ${thu} | ${tg}`);
+        updateLogArea();
+    }
+}
+
+// Cập nhật khung hiển thị text
+function updateLogArea() {
+    const logDiv = document.getElementById('memoryLog');
+    let html = "<strong>Môn học:</strong><br>" + memoryLog.join("<br>");
+    if (busyLog.length > 0) {
+        html += "<br><br><strong>Giờ bận:</strong><br>" + busyLog.join("<br>");
+    }
+    logDiv.innerHTML = html;
+}
+
+// 4. Bắt đầu xếp lịch và vẽ bảng
+async function generateSchedule() {
+    const resultArea = document.getElementById('resultArea');
+    resultArea.innerHTML = "<p class='text-primary'>Đang tính toán...</p>";
+
+    const response = await fetch('/api/generate');
+    const result = await response.json();
+
+    if (result.error) {
+        resultArea.innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+        return;
+    }
+
+    if (result.schedules.length === 0) {
+        resultArea.innerHTML = `<div class="alert alert-warning">Không tìm thấy phương án nào (trùng giờ).</div>`;
+        return;
+    }
+
+    // Vẽ HTML cho từng lịch
+    let html = `<div class="alert alert-success">Tìm thấy ${result.schedules.length} phương án!</div>`;
+    
+    result.schedules.forEach((sched, index) => {
+        html += `
+        <div class="table-responsive">
+            <h5 class="text-primary">Phương án ${index + 1}</h5>
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã HP</th>
+                        <th>Mã Lớp</th>
+                        <th>Thứ</th>
+                        <th>Thời gian</th>
+                        <th>Tên môn</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        // Sắp xếp theo Thứ trước khi vẽ
+        sched.sort((a, b) => a.thu.localeCompare(b.thu));
+        
+        sched.forEach(session => {
+            html += `
+                <tr>
+                    <td>${session.ma_hp}</td>
+                    <td><strong>${session.ma_lop}</strong></td>
+                    <td>${session.thu}</td>
+                    <td>${session.tg}</td>
+                    <td>${session.ten}</td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table></div>`;
+    });
+
+    resultArea.innerHTML = html;
+}
