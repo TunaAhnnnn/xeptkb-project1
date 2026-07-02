@@ -304,7 +304,7 @@ export default function App() {
             <thead>
               <tr className="bg-gray-100">
                 <th className="border p-2">Buổi</th>
-                {DAYS.map(d => <th key={d} className="border p-2">T{d}</th>)}
+                {DAYS.map(d => <th key={d} className="border p-2">{d === 'CN' ? 'CN' : `T${d}`}</th>)}
               </tr>
             </thead>
             <tbody>
