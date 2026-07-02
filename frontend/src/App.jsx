@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = 'http://127.0.0.1:5000';
+const API_BASE = 'https://xeptkb-project1.onrender.com';
 const START_MINS = 6 * 60 + 45;
 const END_MINS = 17 * 60 + 45;
 const TOTAL_MINS = END_MINS - START_MINS;
